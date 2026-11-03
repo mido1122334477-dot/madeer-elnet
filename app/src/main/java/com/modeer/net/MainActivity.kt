@@ -10,7 +10,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,10 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -46,10 +51,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,9 +80,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            MadeerTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    Surface(Modifier.fillMaxSize()) { App() }
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { App() }
                 }
             }
         }
@@ -209,7 +217,7 @@ fun LoginScreen(store: Store, onDone: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.height(24.dp))
-        Text("مدير النت", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text("مدير النت", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         Text("كل واحد يشوف فاضله كام من حصته في باقة النت.")
         Spacer(Modifier.height(8.dp))
 
@@ -406,42 +414,90 @@ fun MainScreen(store: Store, onLeave: () -> Unit) {
 }
 
 @Composable
+fun AppCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(
+            Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content,
+        )
+    }
+}
+
+/** شريط الاستهلاك: أخضر، ثم أصفر عند 80%، ثم برتقالي غامق عند 100%. */
+@Composable
+fun UsageBar(frac: Float, height: Dp = 12.dp) {
+    val color = when {
+        frac >= 1f -> MaterialTheme.colorScheme.error
+        frac >= 0.8f -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    LinearProgressIndicator(
+        progress = { frac },
+        color = color,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(99.dp)),
+    )
+}
+
+@Composable
+fun Notice(text: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color) {
+    Surface(color = bg, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(text, color = fg, fontWeight = FontWeight.Bold, modifier = Modifier.padding(12.dp))
+    }
+}
+
+@Composable
 fun MineTab(g: Group, usedGb: Double, name: String, offline: Boolean) {
     val quota = g.totalGb / g.people
     val left = maxOf(0.0, quota - usedGb)
     val frac = if (quota > 0) (usedGb / quota).toFloat().coerceIn(0f, 1f) else 0f
-    val barColor = if (frac >= 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val c = MaterialTheme.colorScheme
 
     Column(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("أهلاً $name", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(g.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
-        Text(fmt(left), fontSize = 72.sp, fontWeight = FontWeight.Bold)
-        Text("جيجا متبقية من حصتك (${fmt(quota)} جيجا)")
-        LinearProgressIndicator(
-            progress = { frac },
-            color = barColor,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp),
-        )
-        Text("استهلكت ${fmt(usedGb)} جيجا (${(frac * 100).toInt()}%)")
-        if (quota > 0 && usedGb >= quota) {
-            Text("حصتك خلصت.", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+        Column {
+            Text("أهلاً $name", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(g.name, color = c.onSurfaceVariant)
         }
-        Spacer(Modifier.height(8.dp))
+        AppCard {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("حصتك", color = c.onSurfaceVariant)
+                Text("${fmt(quota)} جيجا", fontWeight = FontWeight.Bold)
+            }
+            Text(fmt(left), fontSize = 64.sp, fontWeight = FontWeight.Bold, color = c.primary)
+            Text("جيجا متبقية")
+            UsageBar(frac)
+            Text(
+                "استهلكت ${fmt(usedGb)} جيجا (${(frac * 100).toInt()}%)",
+                color = c.onSurfaceVariant,
+                fontSize = 14.sp,
+            )
+        }
+        if (quota > 0 && usedGb >= quota) {
+            Notice("حصتك خلصت لحد ما الباقة تتجدد.", c.errorContainer, c.onErrorContainer)
+        } else if (frac >= 0.8f) {
+            Notice("وصلت 80% من حصتك. خلي بالك لآخر الشهر.", c.tertiaryContainer, c.onTertiaryContainer)
+        }
+        if (offline) Notice("مفيش اتصال بالنت دلوقتي، بحاول تاني.", c.errorContainer, c.onErrorContainer)
         Text(
             "الأرقام بتتحدّث كل دقيقة وإنت فاتح التطبيق، وكل 15 دقيقة تقريباً في الخلفية.",
             fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = c.onSurfaceVariant,
         )
-        if (offline) Text("مفيش اتصال بالنت دلوقتي، بحاول تاني.", color = MaterialTheme.colorScheme.error)
     }
 }
 
@@ -455,52 +511,74 @@ fun GroupTab(
     onLeave: () -> Unit,
 ) {
     val ctx = LocalContext.current
+    val c = MaterialTheme.colorScheme
     val quota = g.totalGb / g.people
+
     Column(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(g.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text("انضم ${members.size} من ${g.people}، لكل واحد ${fmt(quota)} جيجا.")
+        Column {
+            Text(g.name, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("انضم ${members.size} من ${g.people}، لكل واحد ${fmt(quota)} جيجا.", color = c.onSurfaceVariant)
+        }
 
         for (m in members.sortedByDescending { it.usedBytes }) {
             // لو الشخص لسه مزامنش بعد "بداية باقة جديدة"، رقمه لسه قديم فنعتبره صفر.
             val used = if (m.updatedAt < g.cycleStart) 0.0 else m.usedBytes / Sync.GB
             val left = maxOf(0.0, quota - used)
             val frac = if (quota > 0) (used / quota).toFloat().coerceIn(0f, 1f) else 0f
-            val barColor = if (frac >= 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(m.name + if (m.id == myId) " (أنت)" else "", fontWeight = FontWeight.Bold)
-                    Text("فاضل ${fmt(left)} جيجا")
+            AppCard {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(m.name + if (m.id == myId) " (أنت)" else "", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "فاضل ${fmt(left)} جيجا",
+                        fontWeight = FontWeight.Bold,
+                        color = if (frac >= 1f) c.error else c.onSurface,
+                    )
                 }
-                LinearProgressIndicator(
-                    progress = { frac },
-                    color = barColor,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp),
-                )
+                UsageBar(frac, 10.dp)
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-        Text("كود المجموعة: ${g.code}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Button(
-            onClick = {
-                val send = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "انضم لمجموعة النت بتاعتنا في تطبيق مدير النت بالكود: ${g.code}")
-                }
-                ctx.startActivity(Intent.createChooser(send, null))
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("ابعت الكود لزمايلك") }
-        OutlinedButton(onClick = onRenew, modifier = Modifier.fillMaxWidth()) { Text("بداية باقة جديدة") }
-        TextButton(onClick = onLeave, modifier = Modifier.fillMaxWidth()) { Text("اخرج من المجموعة") }
-        if (offline) Text("مفيش اتصال بالنت دلوقتي، بحاول تاني.", color = MaterialTheme.colorScheme.error)
+        AppCard {
+            Text("كود المجموعة", color = c.onSurfaceVariant)
+            Text(
+                g.code,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp,
+                color = c.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "انضم لمجموعة النت بتاعتنا في تطبيق مدير النت بالكود: ${g.code}")
+                    }
+                    ctx.startActivity(Intent.createChooser(send, null))
+                },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("ابعت الكود لزمايلك") }
+            OutlinedButton(
+                onClick = onRenew,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("بداية باقة جديدة") }
+        }
+        TextButton(onClick = onLeave, modifier = Modifier.fillMaxWidth()) {
+            Text("اخرج من المجموعة", color = c.error)
+        }
+        if (offline) Notice("مفيش اتصال بالنت دلوقتي، بحاول تاني.", c.errorContainer, c.onErrorContainer)
     }
 }
