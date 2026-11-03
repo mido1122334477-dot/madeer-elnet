@@ -1,4 +1,4 @@
-package com.madeer.net
+package com.modeer.net
 
 import android.app.AppOpsManager
 import android.app.usage.NetworkStatsManager

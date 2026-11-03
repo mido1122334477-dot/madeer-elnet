@@ -8,7 +8,7 @@
 1. ادخل على https://console.firebase.google.com واعمل مشروع جديد (Add project). عطّل Google Analytics لو سألك.
 2. من المشروع: **Build ← Firestore Database ← Create database**. اختار أي موقع قريب، وابدأ بوضع **Test mode**.
 3. من الصفحة الرئيسية للمشروع دوس على أيقونة أندرويد (Add app).
-   - Package name لازم يكون بالظبط: `com.madeer.net`
+   - Package name لازم يكون بالظبط: `com.modeer.net`
    - دوس Register app، وبعدين **Download google-services.json**.
 4. حط الملف ده جوه فولدر `app/` في المشروع (جنب `build.gradle.kts`).
 

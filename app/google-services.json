@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "825179227548",
+    "project_id": "madeer-elnet",
+    "storage_bucket": "madeer-elnet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825179227548:android:c3c10ae6e6c7fc8201f459",
+        "android_client_info": {
+          "package_name": "com.modeer.net"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMooAzwHfWWtQRWIz7WgvKa1DHDjW_9v4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

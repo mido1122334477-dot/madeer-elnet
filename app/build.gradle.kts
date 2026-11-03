@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.madeer.net"
+    namespace = "com.modeer.net"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.madeer.net"
+        applicationId = "com.modeer.net"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

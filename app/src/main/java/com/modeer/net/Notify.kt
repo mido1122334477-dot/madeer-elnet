@@ -1,4 +1,4 @@
-package com.madeer.net
+package com.modeer.net
 
 import android.Manifest
 import android.app.Notification
