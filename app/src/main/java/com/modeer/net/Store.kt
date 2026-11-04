@@ -37,6 +37,19 @@ class Store(ctx: Context) {
             sp.edit().putLong("joinedAt", v).apply()
         }
 
+    /** شبكة السكن المخزّنة محلياً، عشان العدّ يشتغل حتى من غير نت. */
+    var homeSsid: String
+        get() = sp.getString("homeSsid", "") ?: ""
+        set(v) {
+            sp.edit().putString("homeSsid", v).apply()
+        }
+
+    var homeGw: String
+        get() = sp.getString("homeGw", "") ?: ""
+        set(v) {
+            sp.edit().putString("homeGw", v).apply()
+        }
+
     fun wasNotified(key: String): Boolean = sp.getBoolean("n_$key", false)
 
     fun markNotified(key: String) {

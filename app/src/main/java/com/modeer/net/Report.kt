@@ -11,6 +11,7 @@ data class Report(
     val head: String,
     val items: List<String>,
     val tips: List<String>,
+    val joke: String? = null,
 )
 
 /** تقارير "اسأل التطبيق": كلها محسوبة من أرقام حقيقية، ومفيش تخمين. */
@@ -70,12 +71,14 @@ object Reports {
         val items = mutableListOf<String>()
         val tips = mutableListOf<String>()
         val head: String
+        var joke: String? = null
 
         when (key) {
             "top" -> {
                 if (group) {
                     val r = sel.sortedByDescending { g.usedGb(it, cs) }
                     head = "${r.first().name} هو الأكتر استهلاكاً."
+                    joke = "${r.first().name} واخد الدوري في الاستهلاك، بس إحنا مقلناش حاجة 😉"
                     for (m in r) {
                         val u = g.usedGb(m, cs)
                         val share = if (used > 0) (u / used * 100).toInt() else 0
@@ -95,6 +98,7 @@ object Reports {
             }
             "when" -> {
                 head = forecast
+                joke = if (runsOut) "بالمعدل ده الباقة هتودّعكم قبل الميعاد، شدّوا الحزام 😅" else "الباقة معاكم لآخرها، حاجة تشرّف 👏"
                 if (group) {
                     for (m in sel) {
                         val u = g.usedGb(m, cs)
@@ -146,7 +150,14 @@ object Reports {
                     items.add(
                         "أكتر يوم استهلاكاً: ${dateStr(LocalDate.now().minusDays(bigIdx.toLong()))} (${fmt(totals[bigIdx])} جيجا، ${fmtI((totals[bigIdx] / total * 100).toInt())}% من الفترة)."
                     )
-                    tips.add("راجع اللي حصل في اليوم ده. التطبيق بيعرف اليوم بس، لكن مش بيعرف السبب (تحميل أو تحديثات أو فيديو).")
+                    tips.add("راجع اللي حصل في اليوم ده. التطبيق بيعرف اليوم والساعة بس، لكن مش بيعرف السبب (تحميل أو تحديثات أو فيديو).")
+                    val others = if (totals.size > 1) (total - totals[bigIdx]) / (totals.size - 1) else 0.0
+                    val hour = sel.maxByOrNull { dayGb(it, bigIdx) }?.peakHours?.getOrElse(bigIdx) { -1L }?.toInt() ?: -1
+                    joke = if (totals[bigIdx] >= 1.0 && totals[bigIdx] >= others * 2) {
+                        Jokes.bigDay(LocalDate.now().minusDays(bigIdx.toLong()), totals[bigIdx], hour)
+                    } else {
+                        "مفيش يوم شاذ، الاستهلاك ماشي بالراحة. حاجة تفرّح 😌"
+                    }
                 }
                 items.add(forecast)
                 if (runsOut && used < quota && remainingDays >= 1) {
@@ -154,6 +165,6 @@ object Reports {
                 }
             }
         }
-        return Report(false, daysData, title, head, items, tips)
+        return Report(false, daysData, title, head, items, tips, joke)
     }
 }

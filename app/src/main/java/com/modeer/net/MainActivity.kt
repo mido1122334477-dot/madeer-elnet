@@ -1,6 +1,7 @@
 package com.modeer.net
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -92,6 +93,15 @@ private fun App() {
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+
+    val locPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(step) {
+        if ((step == Step.Create || step == Step.Join) &&
+            ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            locPerm.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
 
     AnimatedContent(
@@ -199,7 +209,7 @@ private fun MainScreen(store: Store, onLeft: () -> Unit) {
                     0 -> HomeTab(s, myId, isOwner, store.name, offline, refresh)
                     1 -> HistoryTab(s, myId, isOwner)
                     2 -> AskTab(s, myId, isOwner)
-                    else -> SettingsTab(s, refresh) {
+                    else -> SettingsTab(s, refresh, isOwner) {
                         scope.launch {
                             try {
                                 Repo.removeMember(s.g.code, myId)

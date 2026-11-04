@@ -42,6 +42,18 @@ object UsageReader {
         }
     }
 
+    /** زي wifiBytes، بس بيرجّع null لو القراءة فشلت (عشان منحسبش فرق غلط). */
+    fun wifiBytesOrNull(ctx: Context, from: Long, to: Long): Long? {
+        if (to <= from) return 0L
+        return try {
+            val nsm = ctx.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+            val b = nsm.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, null, from, to)
+            b.rxBytes + b.txBytes
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** استهلاك آخر [days] يوم: العنصر i = قبل i يوم (0 = النهارده). */
     fun dailyBytes(ctx: Context, days: Int): List<Long> {
         val zone = ZoneId.systemDefault()

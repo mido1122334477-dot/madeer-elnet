@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 /** لقطة من حالة المجموعة: بياناتها وأعضاؤها. */
@@ -38,6 +39,12 @@ fun PersonCard(g: Group, m: Member, isMe: Boolean, editable: Boolean, delayMs: I
         }
         UsageBar(frac)
         Text("استهلك ${fmt(used)} جيجا (${fmtI((frac * 100).toInt())}%)", color = c.onSurfaceVariant, fontSize = 14.sp)
+        val now = System.currentTimeMillis()
+        val cs = g.cycleStart(now)
+        val fc = Forecasts.calc(used, q, maxOf(cs, m.joinedAt), Cycle.nextBoundary(g.cycleDay, now), now)
+        val who = if (isMe) null else m.name
+        Text(Forecasts.lastsLine(fc, now, who), color = c.primary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Forecasts.warnLine(fc, who)?.let { Notice(it, c.tertiaryContainer, c.onTertiaryContainer) }
         if (editable) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Text("الحصة", color = c.onSurfaceVariant)
@@ -59,6 +66,16 @@ fun HomeTab(s: Snap, myId: String, owner: Boolean, name: String, offline: Boolea
     val days = Cycle.daysUntilNext(g.cycleDay, System.currentTimeMillis())
 
     Page {
+        val ctx = LocalContext.current
+        val net = NetId.current(ctx)
+        if ((g.ssid.isNotBlank() || g.gw.isNotBlank()) && !NetId.isHome(net, g.ssid, g.gw)) {
+            Notice(
+                if (net.onWifi) "إنت على شبكة تانية غير شبكة السكن، فاستهلاكك دلوقتي مش بيتحسب."
+                else "إنت مش متصل بالواي فاي دلوقتي، ومفيش استهلاك بيتحسب.",
+                c.primaryContainer,
+                c.onPrimaryContainer,
+            )
+        }
         if (!owner) {
             val me = s.members.find { it.id == myId }
             Column {
@@ -91,6 +108,9 @@ fun HomeTab(s: Snap, myId: String, owner: Boolean, name: String, offline: Boolea
                     Text("جيجا متبقية في المجموعة", color = c.onSurfaceVariant)
                 }
                 UsageBar(frac)
+                val nowG = System.currentTimeMillis()
+                val fcG = Forecasts.calc(used, g.totalGb, g.cycleStart(nowG), Cycle.nextBoundary(g.cycleDay, nowG), nowG)
+                Text(Forecasts.groupLine(fcG, nowG), color = c.primary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Text(
                     "استهلكتوا ${fmt(used)} جيجا، والباقة بتتجدد بعد ${fmtI(days)} يوم.",
                     color = c.onSurfaceVariant,
@@ -133,6 +153,7 @@ fun HomeTab(s: Snap, myId: String, owner: Boolean, name: String, offline: Boolea
                 }
             }
         }
+        BoardCard(s, myId, owner)
         if (offline) Notice("مفيش اتصال بالنت دلوقتي، بحاول تاني.", c.errorContainer, c.onErrorContainer)
     }
 }

@@ -154,10 +154,16 @@ fun CreateScreen(store: Store, onBack: () -> Unit, onDone: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf<String?>(null) }
     val c = MaterialTheme.colorScheme
+    val ctx = LocalContext.current
 
     Page {
         TextButton(onClick = onBack) { Text("رجوع") }
         Text("أنشئ المجموعة", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "هنطلب إذن الموقع مرة واحدة بس، عشان نعرف اسم واي فاي السكن ونحسب استهلاكه هو بس. مبنتتبعش مكانك.",
+            color = c.onSurfaceVariant,
+            fontSize = 13.sp,
+        )
         AppCard {
             Field("اسم المجموعة (مثلاً: سكن الطلبة)", gname, { gname = it })
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -185,12 +191,15 @@ fun CreateScreen(store: Store, onBack: () -> Unit, onDone: () -> Unit) {
                     scope.launch {
                         try {
                             val now = System.currentTimeMillis()
+                            val net = NetId.current(ctx)
                             val code = Repo.createGroup(
                                 gname.trim().ifEmpty { "مجموعتي" },
                                 total.toDouble(),
                                 people,
                                 store.memberId,
                                 day,
+                                net.ssid ?: "",
+                                net.gw ?: "",
                             )
                             Repo.upsertMember(code, store.memberId, store.name, 0L, now, emptyList(), emptyList())
                             store.groupCode = code
@@ -226,6 +235,11 @@ fun JoinScreen(store: Store, onBack: () -> Unit, onDone: () -> Unit) {
     Page {
         TextButton(onClick = onBack) { Text("رجوع") }
         Text("انضم لمجموعة", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "هنطلب إذن الموقع مرة واحدة بس، عشان نعرف اسم واي فاي السكن ونحسب استهلاكه هو بس. مبنتتبعش مكانك.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp,
+        )
         AppCard {
             Field("كود الدعوة", code, { code = it })
             err?.let { Text(it, color = MaterialTheme.colorScheme.error) }

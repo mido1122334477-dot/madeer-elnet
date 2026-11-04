@@ -34,7 +34,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun SettingsTab(s: Snap, refresh: () -> Unit, onLeave: () -> Unit) {
+fun SettingsTab(s: Snap, refresh: () -> Unit, owner: Boolean = true, onLeave: () -> Unit) {
     val g = s.g
     val c = MaterialTheme.colorScheme
     val ctx = LocalContext.current
@@ -128,6 +128,56 @@ fun SettingsTab(s: Snap, refresh: () -> Unit, onLeave: () -> Unit) {
                 color = c.onSurfaceVariant,
                 fontSize = 13.sp,
             )
+        }
+
+        AppCard {
+            Text("شبكة السكن", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            val net = NetId.current(ctx)
+            val homeName = when {
+                g.ssid.isNotBlank() -> g.ssid
+                g.gw.isNotBlank() -> "شبكة بعنوان ${g.gw}"
+                else -> "لسه متحددتش، فأي واي فاي بيتحسب"
+            }
+            Text("الشبكة المحسوبة: $homeName")
+            Text(
+                "الشبكة الحالية: " + when {
+                    !net.onWifi -> "مفيش واي فاي"
+                    net.ssid != null -> net.ssid
+                    else -> "اسمها غير معروف (فعّل إذن الموقع عشان يظهر)"
+                },
+                color = c.onSurfaceVariant,
+            )
+            Text("الاستهلاك على أي شبكة تانية (شغل، كافيه، بيت) مش بيتحسب.", color = c.onSurfaceVariant, fontSize = 13.sp)
+            if (owner) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            runCatching {
+                                Repo.updateGroup(g.code, mapOf("ssid" to (net.ssid ?: ""), "gw" to (net.gw ?: "")))
+                            }
+                            refresh()
+                        }
+                    },
+                    enabled = net.onWifi,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("اعتبر الشبكة الحالية هي شبكة السكن") }
+            }
+        }
+
+        if (owner) {
+            AppCard {
+                Text("الترتيب", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Chip("أسماء مخفية", g.anon, Modifier.weight(1f)) { update("anon" to true) }
+                    Chip("أسماء ظاهرة", !g.anon, Modifier.weight(1f)) { update("anon" to false) }
+                }
+                Text(
+                    "لو الأسماء مخفية، الأعضاء بيشوفوا اسمهم بس وباقي الأسماء بتظهر \"عضو ٢\" وهكذا. إنت بتشوف الكل.",
+                    color = c.onSurfaceVariant,
+                    fontSize = 13.sp,
+                )
+            }
         }
 
         AppCard {

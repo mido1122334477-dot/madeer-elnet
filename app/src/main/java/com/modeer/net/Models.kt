@@ -15,6 +15,11 @@ data class Group(
     /** وقت آخر "تصفير يدوي" للعدادات. */
     val cycleReset: Long,
     val alerts: Alerts,
+    /** شبكة السكن: اسم الواي فاي وعنوان الراوتر. فاضيين = أي واي فاي بيتحسب. */
+    val ssid: String = "",
+    val gw: String = "",
+    /** إخفاء أسماء الباقيين في الترتيب عن الأعضاء. */
+    val anon: Boolean = true,
 ) {
     /** بداية الباقة الحالية: آخر يوم تجديد، أو آخر تصفير يدوي لو أحدث. */
     fun cycleStart(now: Long = System.currentTimeMillis()): Long =
@@ -57,4 +62,6 @@ data class Member(
     val quotaGb: Double?,
     val daily: List<Long>,
     val monthly: List<Long>,
+    /** peakHours[i] = أكتر ساعة استهلاك في اليوم قبل i يوم (0..23)، أو -1. */
+    val peakHours: List<Long> = emptyList(),
 )

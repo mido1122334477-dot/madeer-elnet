@@ -24,7 +24,7 @@ object Repo {
     private fun longs(v: Any?): List<Long> =
         (v as? List<*>)?.map { (it as? Number)?.toLong() ?: 0L } ?: emptyList()
 
-    suspend fun createGroup(name: String, totalGb: Double, people: Int, ownerId: String, cycleDay: Int): String {
+    suspend fun createGroup(name: String, totalGb: Double, people: Int, ownerId: String, cycleDay: Int, ssid: String = "", gw: String = ""): String {
         repeat(10) {
             val code = newCode()
             val r = ref(code)
@@ -41,6 +41,9 @@ object Repo {
                         "a50" to true,
                         "a80" to true,
                         "a100" to true,
+                        "ssid" to ssid,
+                        "gw" to gw,
+                        "anon" to true,
                     )
                 ).await()
                 return code
@@ -66,6 +69,9 @@ object Repo {
                 d.getBoolean("a80") ?: true,
                 d.getBoolean("a100") ?: true,
             ),
+            ssid = d.getString("ssid") ?: "",
+            gw = d.getString("gw") ?: "",
+            anon = d.getBoolean("anon") ?: true,
         )
     }
 
@@ -81,6 +87,7 @@ object Repo {
                 quotaGb = it.getDouble("quotaGb"),
                 daily = longs(it.get("daily")),
                 monthly = longs(it.get("monthly")),
+                peakHours = longs(it.get("peakHours")),
             )
         }.sortedBy { it.joinedAt }
     }
@@ -95,6 +102,7 @@ object Repo {
         daily: List<Long>,
         monthly: List<Long>,
         usedSince: Long = 0L,
+        peakHours: List<Long> = emptyList(),
     ) {
         ref(code).collection("members").document(id).set(
             mapOf(
@@ -104,6 +112,7 @@ object Repo {
                 "joinedAt" to joinedAt,
                 "daily" to daily,
                 "monthly" to monthly,
+                "peakHours" to peakHours,
                 "updatedAt" to System.currentTimeMillis(),
             ),
             SetOptions.merge(),

@@ -94,6 +94,7 @@ fun AskTab(s: Snap, myId: String, owner: Boolean) {
                 Text("لسه مفيش بيانات كفاية. محتاج 7 أيام على الأقل من الاستخدام عشان أقدر أفسّر الاستهلاك بدل ما أخمّن.")
                 Text("عندنا دلوقتي ${fmtI(r.daysData)} يوم.", color = c.onSurfaceVariant)
             } else {
+                r.joke?.let { Notice(it, c.tertiaryContainer, c.onTertiaryContainer) }
                 Text(r.head, fontWeight = FontWeight.Bold)
                 for (line in r.items) Text("• $line")
                 if (r.tips.isNotEmpty()) {
