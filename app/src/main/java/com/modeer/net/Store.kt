@@ -3,7 +3,7 @@ package com.modeer.net
 import android.content.Context
 import java.util.UUID
 
-/** تخزين محلي بسيط على الموبايل: مين أنا، وأنا في أنهي مجموعة. */
+/** تخزين محلي على الموبايل: مين أنا، وأنا في أنهي مجموعة. */
 class Store(ctx: Context) {
     private val sp = ctx.applicationContext.getSharedPreferences("madeer", Context.MODE_PRIVATE)
 
@@ -18,13 +18,19 @@ class Store(ctx: Context) {
             sp.edit().putString("name", v).apply()
         }
 
+    var phone: String
+        get() = sp.getString("phone", "") ?: ""
+        set(v) {
+            sp.edit().putString("phone", v).apply()
+        }
+
     var groupCode: String
         get() = sp.getString("groupCode", "") ?: ""
         set(v) {
             sp.edit().putString("groupCode", v).apply()
         }
 
-    /** وقت الانضمام: الاستهلاك بيتحسب من بعده بس. */
+    /** وقت الانضمام: استهلاك الباقة بيتحسب من بعده بس. */
     var joinedAt: Long
         get() = sp.getLong("joinedAt", 0L)
         set(v) {
@@ -37,7 +43,8 @@ class Store(ctx: Context) {
         sp.edit().putBoolean("n_$key", true).apply()
     }
 
-    fun clear() {
-        sp.edit().remove("name").remove("groupCode").remove("joinedAt").apply()
+    /** الخروج من المجموعة. الاسم والرقم بيفضلوا عشان تنضم لغيرها. */
+    fun forgetGroup() {
+        sp.edit().remove("groupCode").remove("joinedAt").apply()
     }
 }
