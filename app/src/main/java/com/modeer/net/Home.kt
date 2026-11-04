@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 data class Snap(val g: Group, val members: List<Member>)
 
 @Composable
-fun PersonCard(g: Group, m: Member, isMe: Boolean, editable: Boolean, onQuota: (Double) -> Unit) {
+fun PersonCard(g: Group, m: Member, isMe: Boolean, editable: Boolean, delayMs: Int = 0, onQuota: (Double) -> Unit) {
     val c = MaterialTheme.colorScheme
     val q = g.quotaGbFor(m)
     val used = g.usedGb(m)
@@ -27,13 +27,13 @@ fun PersonCard(g: Group, m: Member, isMe: Boolean, editable: Boolean, onQuota: (
     val frac = if (q > 0) (used / q).toFloat().coerceIn(0f, 1f) else 0f
     val lv = g.level(m)
 
-    AppCard {
+    AppCard(delayMs = delayMs) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(m.name + if (isMe) " (أنت)" else "", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             if (lv > 0) LevelPill(lv)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-            Text(fmt(left), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = c.primary)
+            AnimatedNumber(left, 44.sp, c.primary)
             Text("جيجا متبقية من ${fmt(q)}", color = c.onSurfaceVariant)
         }
         UsageBar(frac)
@@ -87,7 +87,7 @@ fun HomeTab(s: Snap, myId: String, owner: Boolean, name: String, offline: Boolea
                     Text("${fmt(g.totalGb)} جيجا", fontWeight = FontWeight.Bold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                    Text(fmt(maxOf(0.0, g.totalGb - used)), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = c.primary)
+                    AnimatedNumber(maxOf(0.0, g.totalGb - used), 44.sp, c.primary)
                     Text("جيجا متبقية في المجموعة", color = c.onSurfaceVariant)
                 }
                 UsageBar(frac)
@@ -124,8 +124,8 @@ fun HomeTab(s: Snap, myId: String, owner: Boolean, name: String, offline: Boolea
             }
 
             Text("الأشخاص (${fmtI(s.members.size)})", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            for (m in s.members.sortedByDescending { g.usedGb(it) }) {
-                PersonCard(g, m, m.id == myId, g.mode == "custom") { v ->
+            for ((i, m) in s.members.sortedByDescending { g.usedGb(it) }.withIndex()) {
+                PersonCard(g, m, m.id == myId, g.mode == "custom", delayMs = 120 + i * 90) { v ->
                     scope.launch {
                         runCatching { Repo.setMemberQuota(g.code, m.id, v) }
                         refresh()

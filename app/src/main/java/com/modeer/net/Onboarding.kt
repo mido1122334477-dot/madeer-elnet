@@ -68,13 +68,15 @@ private fun HowStep(num: String, text: String) {
 @Composable
 private fun ChoiceCard(title: String, sub: String, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(18.dp)
+    val p = rememberPress()
     Column(
         Modifier
             .fillMaxWidth()
+            .press(p)
             .clip(shape)
             .background(c.surface)
-            .clickable(onClick = onClick)
+            .clickable(interactionSource = p.src, indication = androidx.compose.foundation.LocalIndication.current, onClick = onClick)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -92,8 +94,7 @@ fun SignupScreen(store: Store, onDone: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
 
     Page {
-        BrandMark()
-        Text("قسّم باقة النت بالعدل بين ساكني الشقة", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Hero("قسّم باقة النت بالعدل بين ساكني الشقة", "من غير خناق ولا حسابات.")
         AppCard {
             HowStep("١", "سجّل وأنشئ مجموعة واكتب حجم الباقة.")
             HowStep("٢", "ابعت كود الدعوة لزمايلك.")

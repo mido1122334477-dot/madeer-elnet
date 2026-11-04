@@ -7,7 +7,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,16 +94,24 @@ private fun App() {
         onDispose { owner.lifecycle.removeObserver(obs) }
     }
 
-    when (step) {
-        Step.Signup -> SignupScreen(store) { step = Step.Choose }
-        Step.Choose -> ChooseScreen(store, onCreate = { step = Step.Create }, onJoin = { step = Step.Join })
-        Step.Create -> CreateScreen(store, onBack = { step = Step.Choose }, onDone = { step = Step.Invite })
-        Step.Join -> JoinScreen(store, onBack = { step = Step.Choose }, onDone = { step = Step.Main })
-        Step.Invite -> InviteScreen(store) { step = Step.Main }
-        Step.Main -> if (!access) {
-            AccessScreen()
-        } else {
-            MainScreen(store, onLeft = { step = Step.Choose })
+    AnimatedContent(
+        targetState = step,
+        transitionSpec = {
+            (fadeIn(tween(350)) + slideInVertically(tween(350)) { it / 12 }) togetherWith fadeOut(tween(200))
+        },
+        label = "steps",
+    ) { st ->
+        when (st) {
+            Step.Signup -> SignupScreen(store) { step = Step.Choose }
+            Step.Choose -> ChooseScreen(store, onCreate = { step = Step.Create }, onJoin = { step = Step.Join })
+            Step.Create -> CreateScreen(store, onBack = { step = Step.Choose }, onDone = { step = Step.Invite })
+            Step.Join -> JoinScreen(store, onBack = { step = Step.Choose }, onDone = { step = Step.Main })
+            Step.Invite -> InviteScreen(store) { step = Step.Main }
+            Step.Main -> if (!access) {
+                AccessScreen()
+            } else {
+                MainScreen(store, onLeft = { step = Step.Choose })
+            }
         }
     }
 }
@@ -147,7 +169,7 @@ private fun MainScreen(store: Store, onLeft: () -> Unit) {
     val isOwner = s.g.ownerId == myId
     val refresh: () -> Unit = { tick++ }
     val tabs = listOf("الرئيسية", "السجل", "اسأل", "الإعدادات")
-    val icons = listOf("⌂", "▤", "؟", "⚙")
+    val icons = listOf(Icons.Filled.Home, Icons.Filled.DateRange, Icons.Filled.Info, Icons.Filled.Settings)
 
     Scaffold(
         bottomBar = {
@@ -156,7 +178,7 @@ private fun MainScreen(store: Store, onLeft: () -> Unit) {
                     NavigationBarItem(
                         selected = tab == i,
                         onClick = { tab = i },
-                        icon = { Text(icons[i]) },
+                        icon = { Icon(icons[i], contentDescription = t) },
                         label = { Text(t) },
                     )
                 }
@@ -164,20 +186,30 @@ private fun MainScreen(store: Store, onLeft: () -> Unit) {
         },
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            when (tab) {
-                0 -> HomeTab(s, myId, isOwner, store.name, offline, refresh)
-                1 -> HistoryTab(s, myId, isOwner)
-                2 -> AskTab(s, myId, isOwner)
-                else -> SettingsTab(s, refresh) {
-                    scope.launch {
-                        try {
-                            Repo.removeMember(s.g.code, myId)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    val dir = if (targetState > initialState) 1 else -1
+                    (fadeIn(tween(300)) + slideInHorizontally(tween(300)) { it / 5 * dir }) togetherWith
+                        (fadeOut(tween(150)) + slideOutHorizontally(tween(300)) { -it / 5 * dir })
+                },
+                label = "tabs",
+            ) { t ->
+                when (t) {
+                    0 -> HomeTab(s, myId, isOwner, store.name, offline, refresh)
+                    1 -> HistoryTab(s, myId, isOwner)
+                    2 -> AskTab(s, myId, isOwner)
+                    else -> SettingsTab(s, refresh) {
+                        scope.launch {
+                            try {
+                                Repo.removeMember(s.g.code, myId)
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                            }
+                            store.forgetGroup()
+                            onLeft()
                         }
-                        store.forgetGroup()
-                        onLeft()
                     }
                 }
             }

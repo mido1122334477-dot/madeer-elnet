@@ -43,6 +43,30 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.TextUnit
+import kotlinx.coroutines.delay
 import java.util.Locale
 
 /** رقم عشري بأرقام عربية، مثلاً ٧٥٫٠ */
@@ -81,12 +105,24 @@ fun Page(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun AppCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun AppCard(modifier: Modifier = Modifier, delayMs: Int = 0, content: @Composable ColumnScope.() -> Unit) {
+    // الكارت بيطلع من تحت بنعومة أول ما يظهر.
+    val a = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(delayMs.toLong())
+        a.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
+    }
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = a.value
+                translationY = (1f - a.value) * 48f
+            },
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
     ) {
         Column(
             Modifier.padding(16.dp),
@@ -96,23 +132,103 @@ fun AppCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -
     }
 }
 
-/** شريط الاستهلاك: أخضر، ثم أصفر عند 80%، ثم برتقالي غامق عند 100%. */
+/** شريط الاستهلاك: بيتملي بحركة، وبيغيّر لونه: أخضر، أصفر عند 80%، برتقالي عند 100%. */
 @Composable
 fun UsageBar(frac: Float, height: Dp = 12.dp) {
-    val color = when {
-        frac >= 1f -> MaterialTheme.colorScheme.error
-        frac >= 0.8f -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.primary
+    val cs = MaterialTheme.colorScheme
+    val target = when {
+        frac >= 1f -> cs.error
+        frac >= 0.8f -> cs.tertiary
+        else -> cs.primary
     }
-    LinearProgressIndicator(
-        progress = { frac },
-        color = color,
-        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier
+    val color by animateColorAsState(target, tween(600), label = "barColor")
+    var shown by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(frac) { shown = frac }
+    val f by animateFloatAsState(shown, tween(1000, easing = FastOutSlowInEasing), label = "bar")
+    val round = RoundedCornerShape(99.dp)
+    Box(
+        Modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(99.dp)),
+            .clip(round)
+            .background(cs.surfaceVariant),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(f.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .clip(round)
+                .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.7f), color))),
+        )
+    }
+}
+
+/** رقم كبير بيعدّ لحد قيمته. */
+@Composable
+fun AnimatedNumber(value: Double, fontSize: TextUnit, color: Color) {
+    var target by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(value) { target = value.toFloat() }
+    val v by animateFloatAsState(target, tween(1000, easing = FastOutSlowInEasing), label = "num")
+    Text(fmt(v.toDouble()), fontSize = fontSize, fontWeight = FontWeight.Bold, color = color)
+}
+
+class Press(val src: MutableInteractionSource, val scale: State<Float>)
+
+@Composable
+fun rememberPress(): Press {
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val sc = animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.5f, stiffness = 500f), label = "press")
+    return Press(src, sc)
+}
+
+fun Modifier.press(p: Press): Modifier = graphicsLayer {
+    scaleX = p.scale.value
+    scaleY = p.scale.value
+}
+
+/** بانر أخضر في أول التطبيق، فيه دايرة بتنبض. */
+@Composable
+fun Hero(title: String, sub: String) {
+    val t = rememberInfiniteTransition(label = "pulse")
+    val s by t.animateFloat(
+        1f, 1.3f,
+        infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "s",
     )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF0B6E66), Color(0xFF17A194)))),
+    ) {
+        Box(
+            Modifier
+                .size(170.dp)
+                .align(Alignment.TopStart)
+                .offset(x = (-40).dp, y = (-40).dp)
+                .graphicsLayer { scaleX = s; scaleY = s }
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.09f)),
+        )
+        Box(
+            Modifier
+                .size(90.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 20.dp, y = 20.dp)
+                .graphicsLayer { scaleX = 2.3f - s; scaleY = 2.3f - s }
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.08f)),
+        )
+        Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(12.dp).clip(CircleShape).background(Color.White))
+                Text("مدير النت", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+            Text(title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold, lineHeight = 36.sp)
+            Text(sub, color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp)
+        }
+    }
 }
 
 @Composable
@@ -150,13 +266,15 @@ fun LevelPill(level: Int) {
 fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(10.dp)
+    val p = rememberPress()
     Box(
         modifier
+            .press(p)
             .heightIn(min = 44.dp)
             .clip(shape)
             .background(if (selected) c.primary else c.background)
             .border(1.dp, if (selected) c.primary else c.outline, shape)
-            .clickable(onClick = onClick)
+            .clickable(interactionSource = p.src, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
